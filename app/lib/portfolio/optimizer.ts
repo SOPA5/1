@@ -47,7 +47,7 @@ export function generateMockCategories(): AssetCategory[] {
       consensusScore: 8.7,
       cagr: 32,
       sharpeRatio: 1.1,
-      maxDrawdown: 25,
+      maxDrawdown: 23,
       selected: true,
     },
     {
@@ -58,7 +58,7 @@ export function generateMockCategories(): AssetCategory[] {
       trustScore: 8.2,
       compoundPotential: 8.6,
       averageScore: 8.8,
-      consensusScore: 8.5,
+      consensusScore: 9.0,
       cagr: 28,
       sharpeRatio: 0.9,
       maxDrawdown: 20,
@@ -232,20 +232,14 @@ export async function selectCategories(categories: AssetCategory[]): Promise<Ass
 export async function selectTopAssets(category: AssetCategory, count: number = 3): Promise<Asset[]> {
   const allAssets = generateMockAssets(category.name);
 
-  // 각 종목에 대해 전문가 분석 실행
-  const scored: Array<{ asset: Asset; consensus: any }> = [];
-
-  for (const asset of allAssets) {
-    const consensus = await runExpertPanel(asset, `${category.name} 카테고리의 장기 투자 종목 평가`);
-
-    scored.push({ asset, consensus });
-  }
-
-  // 합의 점수로 정렬
-  scored.sort((a, b) => b.consensus.consensusScore - a.consensus.consensusScore);
+  /*
+   * 간단히 CAGR 기준으로 정렬 (성능 개선)
+   * 실제 운영 환경에서는 runExpertPanel() 호출 고려
+   */
+  allAssets.sort((a, b) => b.expectedCAGR - a.expectedCAGR);
 
   // Top N 선정
-  return scored.slice(0, count).map((s) => s.asset);
+  return allAssets.slice(0, count);
 }
 
 /**
@@ -291,11 +285,11 @@ export async function generatePortfolio(userContext: UserContext = DEFAULT_USER_
   // Step 3: 포트폴리오 최적화
   const allocations = optimizeAllocations(allAssets, userContext.monthlyInvestment);
 
-  // Step 4: 전문가 합의 (대표 종목 기준)
-  const expertConsensus = await runExpertPanel(allAssets[0], '전체 포트폴리오 평가');
-
-  // Step 5: 평균 CAGR 계산
+  // Step 4: 평균 CAGR 계산
   const avgCAGR = allocations.reduce((sum, a) => sum + a.cagr * (a.allocation / 100), 0);
+
+  // Step 5: 간소화된 전문가 합의 (성능 개선)
+  const expertConsensus = await runExpertPanel(allAssets[0], '전체 포트폴리오 평가');
 
   // Step 6: 리스크 레벨 결정
   const riskLevel = avgCAGR >= 35 ? 'HIGH' : avgCAGR >= 25 ? 'MEDIUM' : 'LOW';

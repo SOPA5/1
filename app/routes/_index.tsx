@@ -17,7 +17,7 @@ export const meta: MetaFunction = () => {
 
 export async function loader() {
   try {
-    // 포트폴리오 리포트 생성
+    // 포트폴리오 리포트 생성 (간소화된 버전)
     const report = await generateFullReport(DEFAULT_USER_CONTEXT);
 
     // 목표 달성 가능성 평가
